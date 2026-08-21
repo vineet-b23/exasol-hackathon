@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRACE — Evidence-First Decision Intelligence</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="brand-block">
+        <div class="brand-mark">
+          <svg viewBox="0 0 32 32" class="brand-icon" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 24 L11 12 L16 20 L21 9 L28 24" stroke="url(#brandGrad)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="28" cy="24" r="2.4" fill="#c084fc"/>
+            <defs>
+              <linearGradient id="brandGrad" x1="4" y1="24" x2="28" y2="9" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7c3aed"/>
+                <stop offset="1" stop-color="#e9d5ff"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="brand-word">TRACE</span>
+        </div>
+        <p class="brand-tagline">Evidence-First Decision Intelligence</p>
+        <div class="status-pill">
+          <span class="pulse-dot"></span>
+          EXASOL CONNECTED
+        </div>
+      </div>
+
+      <button class="btn-new-investigation" id="btn-new-investigation">
+        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        New Investigation
+      </button>
+
+      <nav class="side-nav">
+        <button class="nav-item active" data-view="view-investigate">
+          <svg viewBox="0 0 20 20" fill="none" class="nav-icon"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M14 14L18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Investigate</span>
+        </button>
+        <button class="nav-item" data-view="view-history">
+          <svg viewBox="0 0 20 20" fill="none" class="nav-icon"><path d="M3 6.5C3 5.67 3.67 5 4.5 5H8L9.5 6.5H15.5C16.33 6.5 17 7.17 17 8V13.5C17 14.33 16.33 15 15.5 15H4.5C3.67 15 3 14.33 3 13.5V6.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <span>History / Archives</span>
+        </button>
+        <button class="nav-item" data-view="view-schema">
+          <svg viewBox="0 0 20 20" fill="none" class="nav-icon"><rect x="3" y="12" width="3.4" height="5" rx="0.8" stroke="currentColor" stroke-width="1.6"/><rect x="8.3" y="8" width="3.4" height="9" rx="0.8" stroke="currentColor" stroke-width="1.6"/><rect x="13.6" y="4" width="3.4" height="13" rx="0.8" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span>Exasol Schema</span>
+        </button>
+        <button class="nav-item" data-view="view-team">
+          <svg viewBox="0 0 20 20" fill="none" class="nav-icon"><circle cx="7.2" cy="7" r="2.6" stroke="currentColor" stroke-width="1.6"/><circle cx="14" cy="8.4" r="2" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 16.5C2.5 13.5 4.6 11.5 7.2 11.5C9.8 11.5 11.9 13.5 11.9 16.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 12C15 12 16.8 13.6 16.8 16.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Team &amp; Repository</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="status-card">
+      <svg class="status-trace" viewBox="0 0 220 28" preserveAspectRatio="none">
+        <path d="M0 20 L30 20 L42 6 L54 20 L80 20 L92 26 L104 20 L220 20" fill="none" stroke="url(#traceGrad)" stroke-width="1.6"/>
+        <defs>
+          <linearGradient id="traceGrad" x1="0" y1="0" x2="220" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#9d4edd" stop-opacity="0"/>
+            <stop offset="0.5" stop-color="#c084fc"/>
+            <stop offset="1" stop-color="#9d4edd" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="status-card-text">
+        <span class="status-dot-small"></span>
+        <div>
+          <p class="status-title">System Operational</p>
+          <p class="status-sub">100% Deterministic Evidence Scoring</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN PANE ================= -->
+  <main class="main-pane">
+
+    <!-- ============ VIEW 1: INVESTIGATE ============ -->
+    <section id="view-investigate" class="view active">
+      <header class="view-header">
+        <div class="header-left">
+          <h1>Investigate</h1>
+          <span class="model-tag">EXASOL PERSONAL + TRACE v1.0</span>
+        </div>
+        <div class="header-right">
+          <button class="btn-ghost" id="btn-config">
+            <svg viewBox="0 0 20 20" fill="none" width="15" height="15"><path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5"/><path d="M16 10a5.9 5.9 0 00-.1-1.1l1.6-1.3-1.5-2.6-1.9.6a6 6 0 00-1.9-1.1L11.8 2h-3.6l-.4 2.5a6 6 0 00-1.9 1.1l-1.9-.6-1.5 2.6 1.6 1.3a6 6 0 000 2.2L2.5 12.4l1.5 2.6 1.9-.6c.56.47 1.2.85 1.9 1.1l.4 2.5h3.6l.4-2.5a6 6 0 001.9-1.1l1.9.6 1.5-2.6-1.6-1.3c.07-.36.1-.73.1-1.1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            Configuration
+          </button>
+          <button class="btn-primary" id="btn-export">
+            <svg viewBox="0 0 20 20" fill="none" width="15" height="15"><path d="M10 3v9m0 0l3.5-3.5M10 12L6.5 8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v1.5A1.5 1.5 0 005.5 17h9a1.5 1.5 0 001.5-1.5V14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Export PDF
+          </button>
+        </div>
+      </header>
+
+      <!-- ---- HERO / SEARCH STATE ---- -->
+      <div id="hero-search" class="hero-search">
+        <div class="orb-wrap">
+          <div class="orb-glow"></div>
+          <svg class="orb-trace" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="72" class="orb-ring orb-ring-1"/>
+            <circle cx="100" cy="100" r="72" class="orb-ring orb-ring-2"/>
+            <path class="orb-path" d="M40 110 L70 82 L90 118 L112 68 L138 100" />
+          </svg>
+        </div>
+        <h2>Ready to investigate an operational anomaly?</h2>
+        <p class="hero-sub">Ask a question. TRACE builds hypotheses, queries Exasol directly, and scores every claim against the evidence it finds.</p>
+
+        <form id="search-form" class="search-bar">
+          <svg viewBox="0 0 20 20" fill="none" width="18" height="18"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M14 14L18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <input type="text" id="search-input" placeholder="Ask TRACE to investigate... (e.g., Why did revenue fall in July?)" autocomplete="off">
+          <button type="submit" class="search-submit" aria-label="Run investigation">
+            <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+
+        <div class="quick-pills">
+          <button class="pill" data-query="q1">Why did July revenue drop 31%?</button>
+          <button class="pill" data-query="q2">Which region has stockout issues?</button>
+          <button class="pill" data-query="q3">Analyze delivery delays</button>
+        </div>
+      </div>
+
+      <!-- ---- STEPPER (progress) ---- -->
+      <div id="stepper-wrap" class="stepper-wrap hidden">
+        <p class="stepper-query" id="stepper-query"></p>
+        <ol class="stepper" id="stepper">
+          <li class="step" data-step="1"><span class="step-dot"></span><span class="step-label">Understanding Query</span></li>
+          <li class="step" data-step="2"><span class="step-dot"></span><span class="step-label">Generating Hypotheses</span></li>
+          <li class="step" data-step="3"><span class="step-dot"></span><span class="step-label">Querying Exasol DB</span></li>
+          <li class="step" data-step="4"><span class="step-dot"></span><span class="step-label">Analyzing Evidence</span></li>
+          <li class="step" data-step="5"><span class="step-dot"></span><span class="step-label">Challenging Assumptions</span></li>
+          <li class="step" data-step="6"><span class="step-dot"></span><span class="step-label">Final Verification</span></li>
+        </ol>
+      </div>
+
+      <!-- ---- RESULTS STATE ---- -->
+      <div id="results" class="results hidden">
+
+        <div class="finding-card">
+          <div class="finding-top">
+            <span class="badge-leading">🚨 LEADING HYPOTHESIS</span>
+            <div class="score-badge" id="score-badge">
+              <svg viewBox="0 0 64 64" class="score-ring">
+                <circle cx="32" cy="32" r="27" class="score-ring-track"/>
+                <circle cx="32" cy="32" r="27" class="score-ring-fill" id="score-ring-fill"/>
+              </svg>
+              <div class="score-num-wrap">
+                <span class="score-num" id="score-num">89</span><span class="score-pct">%</span>
+              </div>
+            </div>
+          </div>
+          <h3 class="finding-title" id="finding-title">Inventory Shortage in Electronics Category</h3>
+          <p class="finding-summary" id="finding-summary">
+            TRACE identified 14 high-demand SKUs that went out of stock across the Electronics category during July, correlating directly with the region's steepest revenue decline. Estimated impact: <span class="mono-inline">$420,000</span> in lost sales.
+          </p>
+          <span class="evidence-score-label">Evidence Score</span>
+
+          <div class="challenge-zone">
+            <button class="btn-challenge" id="btn-challenge">
+              <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M14 14L18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Challenge My Conclusion
+            </button>
+            <span class="challenge-sub">Force TRACE to search for counter-evidence</span>
+          </div>
+
+          <div id="counter-evidence" class="counter-evidence hidden">
+            <div class="counter-evidence-head">
+              <span class="counter-dot"></span>
+              <span>Counter-Evidence Discovered</span>
+            </div>
+            <p>Two regions — <strong>North</strong> and <strong>Midwest</strong> — recorded only minor, seasonal-pattern-consistent drops (−3% and −5%) with no stockout activity, weakening a purely inventory-driven explanation. Evidence score adjusted to reflect this.</p>
+          </div>
+        </div>
+
+        <div class="evidence-chain-card">
+          <h4>Evidence Chain</h4>
+          <p class="section-sub">Click any node to inspect the executed Exasol query behind it.</p>
+          <div class="chain" id="evidence-chain"><!-- injected by app.js --></div>
+        </div>
+
+        <div class="hypotheses-card">
+          <h4>Competing Hypotheses</h4>
+          <p class="section-sub">TRACE tests alternatives before committing to a leading explanation.</p>
+          <table class="hyp-table" id="hyp-table">
+            <thead>
+              <tr><th>Hypothesis</th><th>Evidence Score</th><th>Supporting Signals</th><th>Status</th></tr>
+            </thead>
+            <tbody id="hyp-table-body"><!-- injected by app.js --></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VIEW 2: HISTORY ============ -->
+    <section id="view-history" class="view">
+      <header class="view-header">
+        <div class="header-left">
+          <h1>History &amp; Archives</h1>
+          <span class="model-tag">3 PAST INVESTIGATIONS</span>
+        </div>
+      </header>
+      <div class="history-grid" id="history-grid"><!-- injected by app.js --></div>
+    </section>
+
+    <!-- ============ VIEW 3: SCHEMA ============ -->
+    <section id="view-schema" class="view">
+      <header class="view-header">
+        <div class="header-left">
+          <h1>Exasol Schema</h1>
+          <span class="model-tag">NOVAMART · SYNTHETIC DATASET</span>
+        </div>
+      </header>
+      <div class="schema-grid" id="schema-grid"><!-- injected by app.js --></div>
+    </section>
+
+    <!-- ============ VIEW 4: TEAM ============ -->
+    <section id="view-team" class="view">
+      <header class="view-header">
+        <div class="header-left">
+          <h1>Team &amp; Repository</h1>
+          <span class="model-tag">AI FOR DECISION INTELLIGENCE</span>
+        </div>
+      </header>
+
+      <div class="team-intro-card">
+        <h2>TRACE — Evidence-First Autonomous Decision Intelligence</h2>
+        <div class="team-meta">
+          <div class="team-meta-item">
+            <span class="meta-label">Track</span>
+            <span class="meta-value">📊 AI for Decision Intelligence</span>
+          </div>
+          <div class="team-meta-item">
+            <span class="meta-label">Primary Database</span>
+            <span class="meta-value">Exasol Personal Cloud</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="team-grid" id="team-grid"><!-- injected by app.js --></div>
+
+      <div class="resources-grid">
+        <a href="#" class="resource-card" id="resource-github">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 .5C5.73.5.98 5.24.98 11.52c0 5.02 3.26 9.28 7.78 10.78.57.1.78-.25.78-.55v-2.15c-3.17.69-3.83-1.36-3.83-1.36-.52-1.31-1.26-1.66-1.26-1.66-1.03-.7.08-.69.08-.69 1.14.08 1.74 1.17 1.74 1.17 1.01 1.73 2.65 1.23 3.3.94.1-.73.4-1.23.72-1.51-2.53-.29-5.19-1.27-5.19-5.63 0-1.24.44-2.26 1.17-3.06-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.14 1.17a10.9 10.9 0 015.72 0c2.18-1.48 3.14-1.17 3.14-1.17.62 1.58.23 2.75.11 3.04.73.8 1.17 1.82 1.17 3.06 0 4.37-2.67 5.34-5.21 5.62.41.35.77 1.04.77 2.1v3.11c0 .3.21.66.79.55A10.53 10.53 0 0023.02 11.52C23.02 5.24 18.27.5 12 .5z"/></svg>
+          <div>
+            <p class="resource-title">GitHub Repository</p>
+            <p class="resource-sub">github.com/trace-team/trace</p>
+          </div>
+        </a>
+        <a href="#" class="resource-card" id="resource-deck">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none"><rect x="3" y="4" width="18" height="13" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <div>
+            <p class="resource-title">Pitch Deck &amp; Documentation</p>
+            <p class="resource-sub">Judge-ready overview + technical writeup</p>
+          </div>
+        </a>
+        <div class="resource-card resource-diagram">
+          <div class="diagram-preview">
+            <svg viewBox="0 0 240 100" class="diagram-svg">
+              <rect x="6" y="38" width="52" height="26" rx="6" class="diagram-node"/>
+              <rect x="94" y="10" width="52" height="26" rx="6" class="diagram-node"/>
+              <rect x="94" y="64" width="52" height="26" rx="6" class="diagram-node"/>
+              <rect x="182" y="38" width="52" height="26" rx="6" class="diagram-node"/>
+              <path d="M58 51 L94 23 M58 51 L94 77 M146 23 L182 51 M146 77 L182 51" class="diagram-line"/>
+            </svg>
+          </div>
+          <div>
+            <p class="resource-title">Architecture Diagram</p>
+            <p class="resource-sub">Query → hypothesis → evidence → verification pipeline</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= NODE DETAIL MODAL ================= -->
+<div id="node-modal" class="modal-overlay hidden">
+  <div class="modal-panel">
+    <button class="modal-close" id="modal-close" aria-label="Close">
+      <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <span class="modal-eyebrow" id="modal-eyebrow">EVIDENCE NODE</span>
+    <h3 id="modal-title">Node title</h3>
+    <div class="modal-section">
+      <span class="modal-label">Table</span>
+      <code class="modal-table-name" id="modal-table-name">table_name</code>
+    </div>
+    <div class="modal-section">
+      <span class="modal-label">Executed SQL Query</span>
+      <pre class="modal-sql" id="modal-sql"></pre>
+    </div>
+    <div class="modal-section">
+      <span class="modal-label">Result Preview</span>
+      <div class="modal-result-wrap">
+        <table class="modal-result-table" id="modal-result-table"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
