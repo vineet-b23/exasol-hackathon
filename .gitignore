@@ -1,1 +1,52 @@
-".env" 
+# ==========================================
+# 1. Secret & Environment Variables (CRITICAL)
+# ==========================================
+.env
+.env*.local
+.env.production
+.env.development
+*.env
+
+# ==========================================
+# 2. Python & Backend
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local SQLite databases (Keep clean for testing)
+*.db
+*.sqlite3
+
+# ==========================================
+# 3. Node.js & Frontend (Next.js/React)
+# ==========================================
+node_modules/
+.next/
+out/
+build/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ==========================================
+# 4. IDEs, Editors & OS Files
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
