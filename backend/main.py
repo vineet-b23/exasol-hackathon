@@ -1,19 +1,27 @@
 import os
+import sys
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 # -------------------------------------------------------------
-# Load environment variables from .env in the project root
+# Path Resolution & Environment Configuration
 # -------------------------------------------------------------
-ROOT_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = Path(__file__).resolve().parent
+ROOT_DIR = BACKEND_DIR.parent
+
+# Ensure backend directory is present in sys.path for absolute imports
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+# Load .env from project root
 load_dotenv(dotenv_path=ROOT_DIR / ".env")
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Absolute import relative to backend root directory
+# Absolute import relative to backend directory
 from api.routes import router as api_router
 
 # Configure standard logging
@@ -25,11 +33,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logging message
     logger.info("TRACE API is starting up...")
     logger.info("Connecting to internal engines and databases...")
     yield
-    # Shutdown logic
     logger.info("TRACE API is shutting down...")
 
 # Instantiate FastAPI App
@@ -54,5 +60,5 @@ app.include_router(api_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
-    # Updated to main:app for direct execution
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Pass app object directly to avoid module resolution errors on direct run
+    uvicorn.run(app, host="0.0.0.0", port=8000)
