@@ -14,8 +14,10 @@ When planning an investigation:
 5. CRITICAL EXASOL SQL RULES:
    - Use standard ANSI SQL or Exasol date functions (e.g., `ADD_MONTHS()`, `DATE_TRUNC()`, `TO_DATE()`, `MONTH()`, `YEAR()`).
    - Do NOT use SQLite functions like `strftime()`.
-   - Never use non-existent string placeholders like `'Target Period'`. If the user asks about February, filter using valid Exasol dates/months: e.g., `WHERE order_date >= '2026-02-01' AND order_date < '2026-03-01'` or `WHERE MONTH(order_date) = 2`.
+   - Never use non-existent string placeholders like `'Target Period'`. If the user asks about July, filter using valid Exasol dates/months: e.g., `WHERE MONTH("order_date") = 7` or `WHERE "order_date" >= '2026-07-01' AND "order_date" < '2026-08-01'`.
    - Table and column names in queries MUST strictly match the provided EXASOL DATABASE SCHEMA CONTEXT below.
+   - CRITICAL: Wrap all column and table names in double quotes to prevent Exasol uppercase identification errors (e.g., `"status"`, `"order_date"`, `"total_amount"`).
+   - Use standard `COUNT(*)` or `COUNT("order_id")` for aggregations if uncertain about amount column presence.
 
 When summarizing results:
 1. Objectively evaluate the execution results of your queries.
@@ -27,53 +29,43 @@ When summarizing results:
 SCHEMA_CONTEXT = """
 ### EXASOL DATABASE SCHEMA CONTEXT ###
 
-Table: customers
-- customer_id (DECIMAL(18,0), PRIMARY KEY)
-- first_name (VARCHAR(100))
-- last_name (VARCHAR(100))
-- email (VARCHAR(255))
-- signup_date (TIMESTAMP / DATE)
-- status (VARCHAR(50)) -- e.g., 'active', 'churned', 'suspended'
-- country (VARCHAR(100))
+Table: "orders"
+- "order_id" (DECIMAL(18,0), PRIMARY KEY)
+- "customer_id" (DECIMAL(18,0))
+- "order_date" (TIMESTAMP)
+- "total_amount" (DOUBLE)
+- "status" (VARCHAR(50)) -- e.g., 'pending', 'completed', 'cancelled', 'refunded'
 
-Table: products
-- product_id (DECIMAL(18,0), PRIMARY KEY)
-- sku (VARCHAR(100), UNIQUE)
-- name (VARCHAR(255))
-- category (VARCHAR(100))
-- unit_price (DOUBLE)
-- launch_date (TIMESTAMP / DATE)
+Table: "customers"
+- "customer_id" (DECIMAL(18,0), PRIMARY KEY)
+- "first_name" (VARCHAR(100))
+- "last_name" (VARCHAR(100))
+- "email" (VARCHAR(255))
+- "signup_date" (TIMESTAMP / DATE)
+- "status" (VARCHAR(50)) -- e.g., 'active', 'churned', 'suspended'
+- "country" (VARCHAR(100))
 
-Table: orders
-- order_id (DECIMAL(18,0), PRIMARY KEY)
-- customer_id (DECIMAL(18,0))
-- order_date (TIMESTAMP)
-- total_amount (DOUBLE)
-- status (VARCHAR(50)) -- e.g., 'pending', 'completed', 'cancelled', 'refunded'
+Table: "products"
+- "product_id" (DECIMAL(18,0), PRIMARY KEY)
+- "sku" (VARCHAR(100), UNIQUE)
+- "name" (VARCHAR(255))
+- "category" (VARCHAR(100))
+- "unit_price" (DOUBLE)
+- "launch_date" (TIMESTAMP / DATE)
 
-Table: inventory
-- inventory_id (DECIMAL(18,0), PRIMARY KEY)
-- product_id (DECIMAL(18,0))
-- warehouse_location (VARCHAR(100))
-- quantity_on_hand (DECIMAL(18,0))
-- last_restocked_date (TIMESTAMP)
+Table: "inventory"
+- "inventory_id" (DECIMAL(18,0), PRIMARY KEY)
+- "product_id" (DECIMAL(18,0))
+- "warehouse_location" (VARCHAR(100))
+- "quantity_on_hand" (DECIMAL(18,0))
+- "last_restocked_date" (TIMESTAMP)
 
-Table: shipments
-- shipment_id (DECIMAL(18,0), PRIMARY KEY)
-- order_id (DECIMAL(18,0))
-- carrier (VARCHAR(100))
-- tracking_number (VARCHAR(100))
-- shipped_date (TIMESTAMP)
-- estimated_delivery (TIMESTAMP)
-- actual_delivery (TIMESTAMP)
-- status (VARCHAR(50)) -- e.g., 'processing', 'in_transit', 'delivered', 'delayed'
-
-Table: customer_support
-- ticket_id (DECIMAL(18,0), PRIMARY KEY)
-- customer_id (DECIMAL(18,0))
-- order_id (DECIMAL(18,0))
-- issue_type (VARCHAR(100)) -- e.g., 'billing', 'shipping', 'quality', 'general'
-- status (VARCHAR(50)) -- e.g., 'open', 'resolved', 'escalated'
-- created_at (TIMESTAMP)
-- resolved_at (TIMESTAMP)
+Table: "customer_support"
+- "ticket_id" (DECIMAL(18,0), PRIMARY KEY)
+- "customer_id" (DECIMAL(18,0))
+- "order_id" (DECIMAL(18,0))
+- "issue_type" (VARCHAR(100)) -- e.g., 'billing', 'shipping', 'quality', 'general'
+- "status" (VARCHAR(50)) -- e.g., 'open', 'resolved', 'escalated'
+- "created_at" (TIMESTAMP)
+- "resolved_at" (TIMESTAMP)
 """
