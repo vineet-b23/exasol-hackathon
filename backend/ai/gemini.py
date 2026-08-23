@@ -87,31 +87,16 @@ class GeminiClient:
         return months.get(timeframe.lower(), 7)
 
     def _sanitize_sql(self, sql: str, timeframe: str) -> str:
-        """Cleans up common invalid Exasol SQL patterns and wraps identifiers in double quotes."""
+        """Cleans up SQL to ensure valid unquoted Exasol SQL standard."""
         month_num = self._get_month_num(timeframe)
         
-        # Replace non-existent column 'month' or raw functions with double-quoted Exasol month function
-        sql = re.sub(r"WHERE\s+month\s*=\s*'[^']+'", f'WHERE MONTH("order_date") = {month_num}', sql, flags=re.IGNORECASE)
-        sql = re.sub(r"WHERE\s+month\s*=\s*\d+", f'WHERE MONTH("order_date") = {month_num}', sql, flags=re.IGNORECASE)
-        sql = re.sub(r"MONTH\(order_date\)", 'MONTH("order_date")', sql, flags=re.IGNORECASE)
+        # Strip all double quotes completely
+        sql = sql.replace('"', '')
         
-        # Enforce quotes on common table and column names to match lower/mixed case in Exasol
-        replacements = {
-            " orders ": ' "orders" ',
-            " customers ": ' "customers" ',
-            " customer_support ": ' "customer_support" ',
-            "status": '"status"',
-            "total_amount": '"total_amount"',
-            "order_date": '"order_date"',
-            "order_id": '"order_id"',
-            "customer_id": '"customer_id"'
-        }
-        
-        for key, val in replacements.items():
-            sql = sql.replace(key, val)
-        
-        # Replace double-quoting artifacts (e.g. ""status"")
-        sql = re.sub(r'"+', '"', sql)
+        # Replace non-existent column 'month' or raw functions
+        sql = re.sub(r"WHERE\s+month\s*=\s*'[^']+'", f'WHERE MONTH(ORDER_DATE) = {month_num}', sql, flags=re.IGNORECASE)
+        sql = re.sub(r"WHERE\s+month\s*=\s*\d+", f'WHERE MONTH(ORDER_DATE) = {month_num}', sql, flags=re.IGNORECASE)
+        sql = re.sub(r"MONTH\(order_date\)", 'MONTH(ORDER_DATE)', sql, flags=re.IGNORECASE)
         
         return sql
 
@@ -180,7 +165,7 @@ class GeminiClient:
         }
 
     def _get_fallback_plan(self, query: str) -> Dict[str, Any]:
-        """Generates query-tailored fallback plan using strictly valid double-quoted Exasol SQL."""
+        """Generates query-tailored fallback plan using strictly unquoted Exasol SQL."""
         timeframe = self._extract_timeframe(query)
         month_num = self._get_month_num(timeframe)
         
@@ -192,7 +177,7 @@ class GeminiClient:
                 {
                     "name": f"{timeframe} Order & Revenue Shift Analysis",
                     "description": f"Evaluate net revenue and order shift during {timeframe}",
-                    "sql": f'SELECT "status", COUNT(*) AS "order_count", SUM("total_amount") AS "revenue" FROM "orders" WHERE MONTH("order_date") = {month_num} GROUP BY "status";',
+                    "sql": f"SELECT STATUS, COUNT(*) AS ORDER_COUNT, SUM(TOTAL_AMOUNT) AS REVENUE FROM ORDERS WHERE MONTH(ORDER_DATE) = {month_num} GROUP BY STATUS;",
                     "score": 82,
                     "signals": f"Order status and revenue breakdown evaluated for {timeframe}",
                     "status": "leading"
@@ -200,7 +185,7 @@ class GeminiClient:
                 {
                     "name": "Customer Support Ticket Escalation Impact",
                     "description": "Check if support ticket spikes correlate with order drops",
-                    "sql": f'SELECT "issue_type", "status", COUNT(*) AS "ticket_count" FROM "customer_support" WHERE MONTH("created_at") = {month_num} GROUP BY "issue_type", "status";',
+                    "sql": f"SELECT ISSUE_TYPE, STATUS, COUNT(*) AS TICKET_COUNT FROM CUSTOMER_SUPPORT WHERE MONTH(CREATED_AT) = {month_num} GROUP BY ISSUE_TYPE, STATUS;",
                     "score": 30,
                     "signals": f"Support ticket resolution volume evaluated for {timeframe}",
                     "status": "ruled_out"
