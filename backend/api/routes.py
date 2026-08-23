@@ -13,13 +13,17 @@ router = APIRouter()
 
 # --- Helpers ---
 def get_exasol_connection():
-    """Utility to establish a connection with Exasol SaaS."""
-    return pyexasol.connect(
+    """Utility to establish a connection with Exasol SaaS and open the target schema."""
+    conn = pyexasol.connect(
         dsn=os.getenv("EXASOL_HOST"),
         user=os.getenv("EXASOL_USER"),
         password=os.getenv("EXASOL_PASSWORD"),
         autocommit=True
     )
+    # Ensure active schema context is set to MAIN for every connection
+    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN").upper()
+    conn.execute(f"OPEN SCHEMA {schema_name};")
+    return conn
 
 # --- Pydantic Schemas ---
 class InvestigateRequest(BaseModel):
@@ -105,17 +109,18 @@ async def get_schema():
     """
     Executes a metadata query against Exasol system tables to fetch active table columns.
     """
+    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN").upper()
     try:
         conn = get_exasol_connection()
         
-        # Query user tables excluding built-in system schemas
+        # Explicitly query tables within the target schema
         sql = """
             SELECT table_name, column_name, column_type
             FROM EXA_ALL_TAB_COLUMNS
-            WHERE table_schema NOT IN ('SYS', 'EXA_STATISTICS')
+            WHERE UPPER(table_schema) = :schema
             ORDER BY table_name, ordinal_position;
         """
-        rows = conn.execute(sql).fetchall()
+        rows = conn.execute(sql, {"schema": schema_name}).fetchall()
         conn.close()
 
         # Group flat result into nested structure expected by frontend
