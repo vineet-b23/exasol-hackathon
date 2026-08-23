@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 from database.sqlite_db import SQLiteDatabase
 from investigation.validator import validate_sql
 from ai.gemini import GeminiClient
-from scoring import calculate_evidence_score
+from .scoring import calculate_evidence_score
 
 logger = logging.getLogger(__name__)
 
