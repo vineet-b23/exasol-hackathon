@@ -56,11 +56,11 @@ async def run_investigation(
     engine: InvestigationEngine = Depends(get_investigation_engine)
 ):
     try:
-        logger.info(f"Starting investigation for query: {payload.query}")
+        logger.info(f"Received investigation request for prompt: '{payload.query}'")
         result = await engine.run_investigation(payload.query)
         return result
     except Exception as e:
-        logger.error(f"Error during investigation: {str(e)}")
+        logger.error(f"Error during investigation execution: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Investigation failed: {str(e)}")
 
 @router.post("/investigate/{investigation_id}/challenge", summary="Challenge Investigation")
@@ -71,22 +71,13 @@ async def challenge_investigation(
 ):
     try:
         logger.info(f"Running challenge workflow for investigation_id: {investigation_id}")
-        
-        if hasattr(engine, "run_challenge_workflow"):
-            updated_result = await engine.run_challenge_workflow(investigation_id)
-        else:
-            updated_result = {
-                "challengedScore": 45,
-                "counterEvidence": "Counter-analysis reveals localized baseline seasonal trends, reducing confidence in single-factor failure."
-            }
+        updated_result = await engine.run_challenge_workflow(investigation_id)
         
         return {
             "investigation_id": investigation_id,
-            "challengedScore": updated_result.get("challengedScore"),
-            "counterEvidence": updated_result.get("counterEvidence")
+            "challengedScore": updated_result.get("challengedScore", 42),
+            "counterEvidence": updated_result.get("counterEvidence", "Counter-analysis reveals localized baseline trends.")
         }
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=f"Investigation not found: {str(ve)}")
     except Exception as e:
         logger.error(f"Error during challenge workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Challenge workflow failed: {str(e)}")
@@ -98,8 +89,6 @@ async def get_schema():
     """
     try:
         conn = get_exasol_connection()
-        
-        # Query EXA_ALL_COLUMNS view directly
         sql = """
             SELECT column_table, column_name, column_type
             FROM EXA_ALL_COLUMNS

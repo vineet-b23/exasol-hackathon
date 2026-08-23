@@ -5,13 +5,40 @@ from typing import Dict, Any, Optional, List
 
 from starlette.concurrency import run_in_threadpool
 
-# Relative internal imports
-from database.sqlite_db import SQLiteDatabase
+# Internal imports
+from api.routes import get_exasol_connection
 from investigation.validator import validate_sql
 from ai.gemini import GeminiClient
 from .scoring import calculate_evidence_score
 
 logger = logging.getLogger(__name__)
+
+class ExasolAdapter:
+    """Wrapper around PyExasol connection to unify query execution interface."""
+    def execute(self, sql_query: str) -> Dict[str, Any]:
+        conn = get_exasol_connection()
+        try:
+            res = conn.execute(sql_query)
+            # PyExasol fetchall returns list of tuples
+            rows_tuples = res.fetchall()
+            # Extract column names from query statement metadata
+            columns = [col[0] for col in res.columns.values()] if hasattr(res, 'columns') else []
+            
+            # Map tuple rows to dictionary list for Gemini context engine
+            rows_dict = []
+            for row in rows_tuples:
+                if columns:
+                    rows_dict.append(dict(zip(columns, row)))
+                else:
+                    rows_dict.append({"data": list(row)})
+            
+            return {
+                "columns": columns,
+                "rows": rows_dict
+            }
+        finally:
+            conn.close()
+
 
 class InvestigationEngine:
     """
@@ -19,20 +46,12 @@ class InvestigationEngine:
     Ties together the LLM planner/summarizer, SQL validator, DB connector, and scoring engine.
     """
     
-    def __init__(self, db: Optional[SQLiteDatabase] = None, gemini: Optional[GeminiClient] = None):
-        self.db = db or SQLiteDatabase(db_path="trace.db")
+    def __init__(self, db: Optional[Any] = None, gemini: Optional[GeminiClient] = None):
+        # Default to ExasolAdapter instead of unpopulated trace.db
+        self.db = db or ExasolAdapter()
         self.gemini = gemini or GeminiClient()
 
     async def run_investigation(self, query: str) -> Dict[str, Any]:
-        """
-        Executes the full investigation pipeline for a given user query.
-        
-        Args:
-            query (str): The natural language investigation request.
-            
-        Returns:
-            dict: The final result mapped exactly to the frontend API contract.
-        """
         investigation_id = str(uuid.uuid4())
         logger.info(f"Starting investigation [ID: {investigation_id}] for query: '{query}'")
 
@@ -60,7 +79,6 @@ class InvestigationEngine:
             sql_query = step.get("sql", "") if isinstance(step, dict) else getattr(step, "sql", "")
             hypothesis_desc = step.get("description", "Unknown hypothesis") if isinstance(step, dict) else getattr(step, "description", "Unknown hypothesis")
             
-            # 1. Validate SQL (Safely handle bool or tuple returns)
             validation_res = validate_sql(sql_query)
             if isinstance(validation_res, tuple):
                 is_valid = bool(validation_res[0])
@@ -87,13 +105,11 @@ class InvestigationEngine:
                 "message": validation_msg
             }
 
-            # 2. Execute if valid
             if is_valid:
                 try:
-                    # Support both db.execute and db.execute_query methods
                     db_func = getattr(self.db, "execute", None) or getattr(self.db, "execute_query", None)
                     if not db_func:
-                        raise AttributeError("Database instance has no execute or execute_query method")
+                        raise AttributeError("Database instance has no execute method")
 
                     if inspect.iscoroutinefunction(db_func):
                         db_res = await db_func(sql_query)
@@ -101,11 +117,11 @@ class InvestigationEngine:
                         db_res = await run_in_threadpool(db_func, sql_query)
 
                     columns, rows = [], []
-                    if isinstance(db_res, tuple) and len(db_res) == 2:
-                        columns, rows = db_res
-                    elif isinstance(db_res, dict):
+                    if isinstance(db_res, dict):
                         columns = db_res.get("columns", [])
                         rows = db_res.get("rows", [])
+                    elif isinstance(db_res, tuple) and len(db_res) == 2:
+                        columns, rows = db_res
                     elif isinstance(db_res, list):
                         rows = db_res
                         if len(rows) > 0 and isinstance(rows[0], dict):
@@ -127,6 +143,8 @@ class InvestigationEngine:
 
             execution_results.append(step_record)
             chain.append(chain_entry)
+
+        logger.info(f"Execution complete. Total steps evaluated: {len(execution_results)}")
 
         # ==========================================
         # STEP C: Scoring
@@ -186,9 +204,6 @@ class InvestigationEngine:
         return frontend_payload
 
     async def run_challenge_workflow(self, investigation_id: str) -> Dict[str, Any]:
-        """
-        Executes a counter-evidence challenge workflow for an existing investigation.
-        """
         logger.info(f"Running challenge workflow for ID: {investigation_id}")
         return {
             "investigation_id": investigation_id,

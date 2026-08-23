@@ -70,7 +70,7 @@ def generate_ecommerce_data():
         );
     """)
 
-    print("Generating synthetic data with anomalies...")
+    print("Generating synthetic data covering January through August 2026...")
 
     orders = []
     payment_logs = []
@@ -81,13 +81,44 @@ def generate_ecommerce_data():
     gateways = ["Stripe", "PayPal", "Adyen"]
     carriers = ["FedEx", "UPS", "DHL"]
     
-    base_time = datetime(2026, 8, 1, 10, 0, 0)
     order_id_counter = 1000
     log_id_counter = 5000
 
-    # 1. Baseline Data: ~200 normal orders over 20 days
+    # ------------------------------------------------------------------
+    # 1. January Baseline + Anomaly (Jan 1, 2026 to Jan 31, 2026)
+    # ------------------------------------------------------------------
+    jan_start = datetime(2026, 1, 1, 10, 0, 0)
+    for day in range(30):
+        current_date = jan_start + timedelta(days=day)
+        
+        # Simulated January Revenue Drop (High cancellation/failure rate in mid-Jan)
+        is_anomaly_period = (12 <= day <= 22)
+        orders_per_day = 4 if is_anomaly_period else 12
+
+        for _ in range(orders_per_day):
+            order_id_counter += 1
+            log_id_counter += 1
+            oid = f"ORD_{order_id_counter}"
+            uid = f"USR_{random.randint(100, 999)}"
+            cat = random.choice(categories)
+            dev = random.choice(devices)
+            amt = round(random.uniform(15.0, 250.0), 2)
+            
+            if is_anomaly_period and random.random() < 0.65:
+                # Anomaly: Failed checkout via Adyen gateway timeout
+                orders.append((oid, uid, cat, dev, "v3.1.0", amt, "FAILED", current_date.strftime("%Y-%m-%d %H:%M:%S")))
+                payment_logs.append((log_id_counter, oid, "Adyen", 504, "GATEWAY_TIMEOUT", random.randint(5000, 9000), current_date.strftime("%Y-%m-%d %H:%M:%S")))
+            else:
+                orders.append((oid, uid, cat, dev, "v3.1.0", amt, "COMPLETED", current_date.strftime("%Y-%m-%d %H:%M:%S")))
+                payment_logs.append((log_id_counter, oid, random.choice(gateways), 200, "SUCCESS", random.randint(100, 300), current_date.strftime("%Y-%m-%d %H:%M:%S")))
+                fulfillment_logs.append((f"FUL_{order_id_counter}", oid, "WH-MAIN", random.choice(carriers), "DELIVERED", 0, (current_date + timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")))
+
+    # ------------------------------------------------------------------
+    # 2. August Data (Aug 1, 2026 to Aug 20, 2026)
+    # ------------------------------------------------------------------
+    aug_start = datetime(2026, 8, 1, 10, 0, 0)
     for day in range(20):
-        current_date = base_time + timedelta(days=day)
+        current_date = aug_start + timedelta(days=day)
         for _ in range(10):
             order_id_counter += 1
             log_id_counter += 1
@@ -95,41 +126,18 @@ def generate_ecommerce_data():
             uid = f"USR_{random.randint(100, 999)}"
             cat = random.choice(categories)
             dev = random.choice(devices)
-            app_ver = "v3.2.0"
             amt = round(random.uniform(20.0, 300.0), 2)
             
-            orders.append((oid, uid, cat, dev, app_ver, amt, "COMPLETED", current_date.strftime("%Y-%m-%d %H:%M:%S")))
+            orders.append((oid, uid, cat, dev, "v3.2.0", amt, "COMPLETED", current_date.strftime("%Y-%m-%d %H:%M:%S")))
             payment_logs.append((log_id_counter, oid, random.choice(gateways), 200, "SUCCESS", random.randint(120, 350), current_date.strftime("%Y-%m-%d %H:%M:%S")))
             fulfillment_logs.append((f"FUL_{order_id_counter}", oid, "WH-MAIN", random.choice(carriers), "DELIVERED", 0, (current_date + timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")))
-
-    # 2. Inject Anomaly 1: Stripe Outage on Aug 15th
-    anomaly_date_1 = datetime(2026, 8, 15, 14, 0, 0)
-    for _ in range(30):
-        order_id_counter += 1
-        log_id_counter += 1
-        oid = f"ORD_{order_id_counter}"
-        uid = f"USR_{random.randint(100, 999)}"
-        
-        orders.append((oid, uid, "Electronics", "Desktop", "v3.2.0", 199.99, "FAILED", anomaly_date_1.strftime("%Y-%m-%d %H:%M:%S")))
-        payment_logs.append((log_id_counter, oid, "Stripe", 504, "GATEWAY_TIMEOUT", random.randint(4000, 8000), anomaly_date_1.strftime("%Y-%m-%d %H:%M:%S")))
-
-    # 3. Inject Anomaly 2: iOS App Crash on v3.2.1 for Electronics on Aug 18th
-    anomaly_date_2 = datetime(2026, 8, 18, 9, 0, 0)
-    for _ in range(25):
-        order_id_counter += 1
-        log_id_counter += 1
-        oid = f"ORD_{order_id_counter}"
-        uid = f"USR_{random.randint(100, 999)}"
-        
-        orders.append((oid, uid, "Electronics", "iOS", "v3.2.1", 450.00, "FAILED", anomaly_date_2.strftime("%Y-%m-%d %H:%M:%S")))
-        payment_logs.append((log_id_counter, oid, "PayPal", 500, "APP_CLIENT_CRASH", 50, anomaly_date_2.strftime("%Y-%m-%d %H:%M:%S")))
 
     # Insert Data using PyExasol's import_from_iterable
     conn.import_from_iterable(orders, "ORDERS")
     conn.import_from_iterable(payment_logs, "PAYMENT_LOGS")
     conn.import_from_iterable(fulfillment_logs, "FULFILLMENT_LOGS")
 
-    # Insert Inventory Catalog (~20 rows)
+    # Insert Inventory Catalog
     inventory = [
         ("PRD_101", "Wireless Headphones", "Electronics", 15, "2026-08-20 10:00:00"),
         ("PRD_102", "Mechanical Keyboard", "Electronics", 0, "2026-08-20 10:00:00"),
@@ -138,7 +146,7 @@ def generate_ecommerce_data():
     ]
     conn.import_from_iterable(inventory, "INVENTORY")
 
-    print("Successfully seeded ~530 rows into Exasol!")
+    print(f"Successfully seeded {len(orders)} orders into Exasol covering January & August 2026!")
     conn.close()
 
 if __name__ == "__main__":
