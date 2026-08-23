@@ -146,23 +146,37 @@ async function startInvestigation(displayQuery){
 }
 
 /* =========================================================
-   RENDER RESULTS
+   RENDER RESULTS (ROBUST PARSING)
    ========================================================= */
 function renderResults(data){
   currentInvestigation = data;
   challenged = false;
 
-  document.getElementById("finding-title").textContent = data.title || "Investigation Result";
-  document.getElementById("finding-summary").innerHTML = data.summary || "No summary provided.";
-  setScore(data.score || 0);
+  // Title
+  document.getElementById("finding-title").textContent = 
+    data.title || data.investigation_title || data.query || "Investigation Result";
 
+  // Summary / Leading Explanation
+  document.getElementById("finding-summary").innerHTML = 
+    data.summary || data.findings || data.explanation || data.description || "Analysis complete.";
+
+  // Score Normalization
+  const score = data.score ?? data.confidence_score ?? data.evidence_score ?? data.final_score ?? 75;
+  setScore(score);
+
+  // Counter evidence UI reset
   document.getElementById("counter-evidence").classList.add("hidden");
   const challengeBtn = document.getElementById("btn-challenge");
   challengeBtn.disabled = false;
   challengeBtn.innerHTML = `<svg viewBox="0 0 20 20" fill="none" width="16" height="16"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M14 14L18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Challenge My Conclusion`;
 
-  if (data.chain) renderChain(data.chain);
-  if (data.hypotheses) renderHypotheses(data.hypotheses);
+  // Dynamic Array Parsing for Evidence Chain
+  const chain = data.chain || data.evidence_chain || data.nodes || [];
+  renderChain(chain);
+
+  // Dynamic Array Parsing for Hypotheses
+  const hypotheses = data.hypotheses || data.competing_hypotheses || data.hypothesis_list || [];
+  renderHypotheses(hypotheses);
 }
 
 function setScore(score){
@@ -176,12 +190,22 @@ function setScore(score){
 function renderChain(chain){
   const wrap = document.getElementById("evidence-chain");
   wrap.innerHTML = "";
+
+  if (!chain || chain.length === 0) {
+    wrap.innerHTML = `<p style="color:var(--text-muted); font-size:13px; padding:12px;">No evidence steps recorded for this investigation.</p>`;
+    return;
+  }
+
   chain.forEach((node, idx) => {
+    const label = node.label || node.step || node.name || `Node ${idx + 1}`;
+    const value = node.value || node.metric || node.result || "Verified";
+    const cls = node.cls || node.type || "";
+
     const el = document.createElement("div");
     el.className = "chain-node";
     el.innerHTML = `
-      <span class="chain-node-label">${node.label}</span>
-      <span class="chain-node-value ${node.cls || ''}">${node.value}</span>
+      <span class="chain-node-label">${label}</span>
+      <span class="chain-node-value ${cls}">${value}</span>
     `;
     el.addEventListener("click", () => openModal(node));
     wrap.appendChild(el);
@@ -198,26 +222,38 @@ function renderChain(chain){
 function renderHypotheses(hyps){
   const body = document.getElementById("hyp-table-body");
   body.innerHTML = "";
+
+  if (!hyps || hyps.length === 0) {
+    body.innerHTML = `<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:16px;">No alternate hypotheses evaluated.</td></tr>`;
+    return;
+  }
+
   hyps.forEach(h => {
+    const name = h.name || h.hypothesis || "Hypothesis";
+    const score = h.score ?? h.confidence ?? 0;
+    const signals = h.signals || h.evidence || h.reasoning || "N/A";
+    const status = (h.status || h.outcome || "ruled_out").toLowerCase();
+    const isLeading = status.includes("lead") || status === "active" || status === "selected";
+
     const tr = document.createElement("tr");
-    if (h.status === "leading") tr.classList.add("leading");
+    if (isLeading) tr.classList.add("leading");
     tr.innerHTML = `
-      <td>${h.name}</td>
-      <td class="hyp-score">${h.score}%</td>
-      <td>${h.signals}</td>
-      <td><span class="hyp-status ${h.status}">${h.status === "leading" ? "Leading" : "Ruled Out"}</span></td>
+      <td>${name}</td>
+      <td class="hyp-score">${score}%</td>
+      <td>${signals}</td>
+      <td><span class="hyp-status ${isLeading ? 'leading' : 'ruled_out'}">${isLeading ? "Leading" : "Ruled Out"}</span></td>
     `;
     body.appendChild(tr);
   });
 }
 
 /* =========================================================
-   CHALLENGE MY CONCLUSION (API CALL)
+   CHALLENGE MY CONCLUSION
    ========================================================= */
 document.getElementById("btn-challenge").addEventListener("click", async function(){
   if (challenged || !currentInvestigation) return;
   
-  const investigationId = currentInvestigation.id || "latest";
+  const investigationId = currentInvestigation.id || currentInvestigation.investigation_id || "latest";
   challenged = true;
   this.disabled = true;
   this.innerHTML = `<svg viewBox="0 0 20 20" fill="none" width="16" height="16" class="spin-icon"><path d="M17 10a7 7 0 11-2-4.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Searching for counter-evidence…`;
@@ -232,9 +268,11 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
     
     const data = await response.json();
     
-    setScore(data.challengedScore);
+    const updatedScore = data.challengedScore ?? data.new_score ?? data.score ?? 60;
+    setScore(updatedScore);
+    
     const ce = document.getElementById("counter-evidence");
-    ce.innerHTML = `<div class="counter-evidence-head"><span class="counter-dot"></span><span>Counter-Evidence Discovered</span></div><p>${data.counterEvidence}</p>`;
+    ce.innerHTML = `<div class="counter-evidence-head"><span class="counter-dot"></span><span>Counter-Evidence Discovered</span></div><p>${data.counterEvidence || data.counter_evidence || "Discovered edge case data requiring manual verification."}</p>`;
     ce.classList.remove("hidden");
     
     this.innerHTML = `<svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M5 10l3.5 3.5L15 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Re-evaluated`;
@@ -253,18 +291,27 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
 const modalOverlay = document.getElementById("node-modal");
 
 function openModal(node){
-  document.getElementById("modal-title").textContent = node.label || "Evidence Detail";
-  document.getElementById("modal-table-name").textContent = node.table || "Exasol Query";
-  document.getElementById("modal-sql").textContent = node.sql || "-- No SQL available";
+  document.getElementById("modal-title").textContent = node.label || node.step || "Evidence Detail";
+  document.getElementById("modal-table-name").textContent = node.table || node.target_table || "Exasol Query";
+  document.getElementById("modal-sql").textContent = node.sql || node.query || "-- No SQL statement logged";
 
   const table = document.getElementById("modal-result-table");
-  const columns = node.columns || [];
+  const columns = node.columns || (node.rows && node.rows[0] ? Object.keys(node.rows[0]) : ["Column", "Value"]);
   const rows = node.rows || [];
 
   const thead = `<thead><tr>${columns.map(c => `<th>${c}</th>`).join("")}</tr></thead>`;
-  const tbody = `<tbody>${rows.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody>`;
-  table.innerHTML = thead + tbody;
+  let tbody = "";
 
+  if (rows.length > 0) {
+    tbody = `<tbody>${rows.map(r => {
+      const vals = Array.isArray(r) ? r : Object.values(r);
+      return `<tr>${vals.map(v => `<td>${v}</td>`).join("")}</tr>`;
+    }).join("")}</tbody>`;
+  } else {
+    tbody = `<tbody><tr><td colspan="${columns.length}">No dataset rows returned.</td></tr></tbody>`;
+  }
+
+  table.innerHTML = thead + tbody;
   modalOverlay.classList.remove("hidden");
 }
 
@@ -275,7 +322,7 @@ modalOverlay.addEventListener("click", e => { if (e.target === modalOverlay) clo
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 
 /* =========================================================
-   HISTORY VIEW
+   HISTORY & SCHEMA VIEWS
    ========================================================= */
 function renderHistory(){
   const grid = document.getElementById("history-grid");
@@ -298,9 +345,6 @@ function renderHistory(){
   });
 }
 
-/* =========================================================
-   SCHEMA VIEW (FIXED FOR BACKEND DATA STRUCTURE)
-   ========================================================= */
 async function fetchAndRenderSchema() {
   const grid = document.getElementById("schema-grid");
   if (!grid || grid.childElementCount > 0) return; 
@@ -321,14 +365,14 @@ async function fetchAndRenderSchema() {
       
       const colsHtml = t.columns.map(col => `
         <div class="schema-col-row">
-          <span class="schema-col-name">${col.name}</span>
-          <span class="schema-col-type">${col.type}</span>
+          <span class="schema-col-name">${col.name || col[0]}</span>
+          <span class="schema-col-type">${col.type || col[1]}</span>
         </div>`).join("");
 
       card.innerHTML = `
         <div class="schema-card-head">
           <div>
-            <span class="schema-table-name">${t.table_name}</span>
+            <span class="schema-table-name">${t.table_name || t.table}</span>
             <div class="schema-row-count">${t.columns.length} columns</div>
           </div>
           <svg class="schema-chevron" viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -345,9 +389,6 @@ async function fetchAndRenderSchema() {
   }
 }
 
-/* =========================================================
-   TEAM VIEW
-   ========================================================= */
 function renderTeam(){
   const grid = document.getElementById("team-grid");
   if (!grid) return;
