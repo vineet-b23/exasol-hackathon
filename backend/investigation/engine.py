@@ -5,8 +5,7 @@ from typing import Dict, Any, Optional, List
 
 from starlette.concurrency import run_in_threadpool
 
-# Internal imports
-from api.routes import get_exasol_connection
+# Internal imports (Top-level imports MUST NOT import from api.routes to avoid circular imports)
 from investigation.validator import validate_sql
 from ai.gemini import GeminiClient
 from .scoring import calculate_evidence_score
@@ -16,6 +15,9 @@ logger = logging.getLogger(__name__)
 class ExasolAdapter:
     """Wrapper around PyExasol connection to unify query execution interface."""
     def execute(self, sql_query: str) -> Dict[str, Any]:
+        # Lazy local import prevents circular import with api.routes at module load time
+        from api.routes import get_exasol_connection
+        
         conn = get_exasol_connection()
         try:
             res = conn.execute(sql_query)
