@@ -1,13 +1,26 @@
+import os
 import logging
 from typing import Optional
+import pyexasol
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-# Fixed: Absolute import relative to backend root directory
+# Absolute import relative to backend root directory
 from investigation.engine import InvestigationEngine
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# --- Helpers ---
+def get_exasol_connection():
+    """Utility to establish a connection with Exasol SaaS."""
+    return pyexasol.connect(
+        dsn=os.getenv("EXASOL_HOST"),
+        user=os.getenv("EXASOL_USER"),
+        password=os.getenv("EXASOL_PASSWORD"),
+        schema=os.getenv("EXASOL_SCHEMA", "MAIN"),
+        autocommit=True
+    )
 
 # --- Pydantic Schemas ---
 class InvestigateRequest(BaseModel):
@@ -27,6 +40,18 @@ def get_investigation_engine() -> InvestigationEngine:
 async def health_check():
     """Simple health-check endpoint."""
     return {"status": "ok"}
+
+@router.get("/db-test", summary="Exasol DB Health Check")
+async def db_test():
+    """Verifies live pyexasol connection to Exasol SaaS cluster."""
+    try:
+        conn = get_exasol_connection()
+        res = conn.execute("SELECT 1 AS status;").fetchall()
+        conn.close()
+        return {"status": "connected", "result": res}
+    except Exception as e:
+        logger.error(f"Exasol connection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database connection error: {str(e)}")
 
 @router.post("/investigate", summary="Run Investigation")
 async def run_investigation(
@@ -57,7 +82,6 @@ async def challenge_investigation(
     try:
         logger.info(f"Running challenge workflow for investigation_id: {investigation_id}")
         
-        # Check if run_challenge_workflow is implemented on the engine; fallback to baseline challenge mock if not
         if hasattr(engine, "run_challenge_workflow"):
             updated_result = await engine.run_challenge_workflow(investigation_id)
         else:
@@ -80,41 +104,33 @@ async def challenge_investigation(
 @router.get("/schema", summary="Get Database Schema")
 async def get_schema():
     """
-    Executes a query against the SQLite database returning table metadata
-    for the dynamic UI schema viewer.
+    Executes a metadata query against Exasol system tables to fetch active table columns.
     """
+    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN")
     try:
-        schema_metadata = {
-            "tables": [
-                {
-                    "table_name": "customers",
-                    "columns": [
-                        {"name": "customer_id", "type": "INTEGER"},
-                        {"name": "name", "type": "VARCHAR"},
-                        {"name": "signup_date", "type": "DATE"}
-                    ]
-                },
-                {
-                    "table_name": "products",
-                    "columns": [
-                        {"name": "product_id", "type": "INTEGER"},
-                        {"name": "name", "type": "VARCHAR"},
-                        {"name": "category", "type": "VARCHAR"},
-                        {"name": "price", "type": "REAL"}
-                    ]
-                },
-                {
-                    "table_name": "orders",
-                    "columns": [
-                        {"name": "order_id", "type": "INTEGER"},
-                        {"name": "customer_id", "type": "INTEGER"},
-                        {"name": "order_date", "type": "DATE"},
-                        {"name": "total_amount", "type": "REAL"}
-                    ]
-                }
-            ]
-        }
-        return schema_metadata
+        conn = get_exasol_connection()
+        
+        # Query Exasol metadata system view for user tables and columns
+        sql = """
+            SELECT table_name, column_name, column_type
+            FROM EXA_ALL_TAB_COLUMNS
+            WHERE table_schema = :schema
+            ORDER BY table_name, ordinal_position;
+        """
+        rows = conn.execute(sql, {"schema": schema_name}).fetchall()
+        conn.close()
+
+        # Group flat result into nested structure expected by frontend
+        tables_dict = {}
+        for table_name, col_name, col_type in rows:
+            if table_name not in tables_dict:
+                tables_dict[table_name] = []
+            tables_dict[table_name].append({"name": col_name, "type": col_type})
+
+        tables = [{"table_name": k, "columns": v} for k, v in tables_dict.items()]
+        return {"tables": tables}
+        
     except Exception as e:
-        logger.error(f"Error fetching schema: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch database schema.")
+        logger.error(f"Error fetching Exasol schema: {str(e)}")
+        # Fallback to empty schema structure if DB is uninitialized or empty
+        return {"tables": []}
