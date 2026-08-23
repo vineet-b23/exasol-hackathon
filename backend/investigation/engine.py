@@ -24,7 +24,7 @@ class ExasolAdapter:
             # PyExasol fetchall returns list of tuples
             rows_tuples = res.fetchall()
             # Extract column names from query statement metadata
-            columns = [col[0] for col in res.columns.values()] if hasattr(res, 'columns') else []
+            columns = [str(col) for col in (res.columns.tolist() if hasattr(res.columns, 'tolist') else res.columns)] if hasattr(res, 'columns') else []
             
             # Map tuple rows to dictionary list for Gemini context engine
             rows_dict = []
