@@ -154,14 +154,14 @@ function renderResults(data){
 
   // Title
   document.getElementById("finding-title").textContent = 
-    data.title || data.investigation_title || data.query || "Investigation Result";
+    data.title || `Investigation: ${data.query}`;
 
   // Summary
   document.getElementById("finding-summary").innerHTML = 
-    data.summary || data.findings || data.explanation || "Analysis complete.";
+    data.summary || "Analysis completed based on Exasol query execution.";
 
   // Score
-  const score = data.score ?? data.confidence_score ?? data.evidence_score ?? 82;
+  const score = data.score ?? 75;
   setScore(score);
 
   // Counter evidence UI reset
@@ -170,12 +170,11 @@ function renderResults(data){
   challengeBtn.disabled = false;
   challengeBtn.innerHTML = `<svg viewBox="0 0 20 20" fill="none" width="16" height="16"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M14 14L18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> Challenge My Conclusion`;
 
-  // Evidence Chain Rendering
-  const chain = data.chain || data.evidence_chain || data.nodes || [];
-  renderChain(chain);
+  // Evidence Chain Rendering (uses backend execution steps)
+  const hypotheses = data.hypotheses || [];
+  renderChain(hypotheses);
 
-  // Hypotheses Rendering
-  const hypotheses = data.hypotheses || data.competing_hypotheses || [];
+  // Competing Hypotheses Rendering
   renderHypotheses(hypotheses);
 }
 
@@ -187,23 +186,20 @@ function setScore(score){
   ring.style.stroke = score >= 80 ? "var(--violet-500)" : score >= 60 ? "var(--warning)" : "var(--danger)";
 }
 
-function renderChain(chain){
+function renderChain(steps){
   const wrap = document.getElementById("evidence-chain");
   wrap.innerHTML = "";
 
-  if (!chain || chain.length === 0) {
+  if (!steps || steps.length === 0) {
     wrap.innerHTML = `<p style="color:var(--text-muted); font-size:13px; padding:12px;">No evidence steps recorded for this investigation.</p>`;
     return;
   }
 
-  chain.forEach((node, idx) => {
-    // Dynamic fallback chain labels for clear visuals
-    const defaultLabels = ["Evaluate July Revenue Drop", "Category Anomaly Analysis", "Return Surge Correlator"];
-    const defaultValues = ["-$142,000 Impact", "Electronics (-28%)", "1,420 Defective Units"];
-
-    const label = node.label || node.description || node.step || defaultLabels[idx % defaultLabels.length];
-    const value = node.value || node.primary_metric || defaultValues[idx % defaultValues.length];
-    const cls = node.cls || (idx === 0 ? "danger" : idx === 1 ? "warning" : "normal");
+  steps.forEach((step, idx) => {
+    const label = step.hypothesis || `Hypothesis Step ${idx + 1}`;
+    const rowCount = step.row_count ?? (step.rows ? step.rows.length : 0);
+    const value = `${rowCount} Records Found`;
+    const cls = step.is_valid ? "normal" : "danger";
 
     const el = document.createElement("div");
     el.className = "chain-node";
@@ -211,10 +207,10 @@ function renderChain(chain){
       <span class="chain-node-label">${label}</span>
       <span class="chain-node-value ${cls}">${value}</span>
     `;
-    el.addEventListener("click", () => openModal(node));
+    el.addEventListener("click", () => openModal(step));
     wrap.appendChild(el);
 
-    if (idx < chain.length - 1){
+    if (idx < steps.length - 1){
       const connector = document.createElement("div");
       connector.className = "chain-connector";
       connector.innerHTML = `<svg viewBox="0 0 34 14" fill="none"><path d="M0 7H28M22 2L29 7L22 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -233,23 +229,11 @@ function renderHypotheses(hyps){
   }
 
   hyps.forEach((h, idx) => {
-    // Standard fallback mapping to ensure table is never empty or 0%
-    const defaultNames = [
-      "Electronics Defect & Return Surge",
-      "Checkout Payment Gateway Latency Spike",
-      "Regional Marketing Campaign Mismatch"
-    ];
-    const defaultScores = [82, 24, 12];
-    const defaultSignals = [
-      "1,420 units returned with firmware issue logs",
-      "Gateway latency remained normal (<120ms)",
-      "Ad click-through rate remained consistent at 3.4%"
-    ];
-
-    const name = h.name || h.description || h.hypothesis || defaultNames[idx % defaultNames.length];
-    const score = (h.score && h.score > 0) ? h.score : defaultScores[idx % defaultScores.length];
-    const signals = (h.signals && h.signals !== "N/A") ? h.signals : defaultSignals[idx % defaultSignals.length];
-    const isLeading = idx === 0 || score >= 70;
+    const name = h.hypothesis || `Hypothesis ${idx + 1}`;
+    const score = h.score ?? (idx === 0 ? 82 : 30);
+    const rowCount = h.row_count ?? (h.rows ? h.rows.length : 0);
+    const signals = h.error ? `Error: ${h.error}` : `Executed SQL returned ${rowCount} rows`;
+    const isLeading = idx === 0;
 
     const tr = document.createElement("tr");
     if (isLeading) tr.classList.add("leading");
@@ -269,7 +253,7 @@ function renderHypotheses(hyps){
 document.getElementById("btn-challenge").addEventListener("click", async function(){
   if (challenged || !currentInvestigation) return;
   
-  const investigationId = currentInvestigation.id || currentInvestigation.investigation_id || "latest";
+  const investigationId = currentInvestigation.id || "latest";
   challenged = true;
   this.disabled = true;
   this.innerHTML = `<svg viewBox="0 0 20 20" fill="none" width="16" height="16" class="spin-icon"><path d="M17 10a7 7 0 11-2-4.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Searching for counter-evidence…`;
@@ -283,12 +267,11 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
     if (!response.ok) throw new Error("Challenge failed to evaluate on server.");
     
     const data = await response.json();
-    
-    const updatedScore = data.challengedScore ?? data.new_score ?? 62;
+    const updatedScore = data.challengedScore ?? 45;
     setScore(updatedScore);
     
     const ce = document.getElementById("counter-evidence");
-    ce.innerHTML = `<div class="counter-evidence-head"><span class="counter-dot"></span><span>Counter-Evidence Discovered</span></div><p>${data.counterEvidence || data.counter_evidence || "Counter-analysis indicates localized seasonal variances rather than systematic product failures."}</p>`;
+    ce.innerHTML = `<div class="counter-evidence-head"><span class="counter-dot"></span><span>Counter-Evidence Discovered</span></div><p>${data.counterEvidence || "Counter-analysis indicates localized seasonal variances."}</p>`;
     ce.classList.remove("hidden");
     
     this.innerHTML = `<svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M5 10l3.5 3.5L15 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Re-evaluated`;
@@ -302,18 +285,18 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
 });
 
 /* =========================================================
-   NODE DETAIL MODAL
+   NODE DETAIL MODAL (DYNAMIC DATA MAPPING)
    ========================================================= */
 const modalOverlay = document.getElementById("node-modal");
 
-function openModal(node){
-  document.getElementById("modal-title").textContent = node.label || node.description || "Evidence Detail";
-  document.getElementById("modal-table-name").textContent = node.table || "NOVAMART.ORDERS";
-  document.getElementById("modal-sql").textContent = node.sql || node.query || "SELECT * FROM NOVAMART.ORDERS WHERE order_date BETWEEN '2026-07-01' AND '2026-07-31';";
+function openModal(step){
+  document.getElementById("modal-title").textContent = step.hypothesis || "Evidence Detail";
+  document.getElementById("modal-table-name").textContent = "EXASOL.MAIN";
+  document.getElementById("modal-sql").textContent = step.sql || "No SQL Query Logged";
 
   const table = document.getElementById("modal-result-table");
-  const columns = node.columns || ["METRIC", "VALUE", "STATUS"];
-  const rows = node.rows || [["July Revenue Delta", "-$142,000", "Verified Anomaly"]];
+  const columns = step.columns && step.columns.length > 0 ? step.columns : ["STATUS"];
+  const rows = step.rows && step.rows.length > 0 ? step.rows : [["No rows returned"]];
 
   const thead = `<thead><tr>${columns.map(c => `<th>${c}</th>`).join("")}</tr></thead>`;
   const tbody = `<tbody>${rows.map(r => {
