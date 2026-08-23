@@ -18,7 +18,6 @@ def get_exasol_connection():
         dsn=os.getenv("EXASOL_HOST"),
         user=os.getenv("EXASOL_USER"),
         password=os.getenv("EXASOL_PASSWORD"),
-        schema=os.getenv("EXASOL_SCHEMA", "MAIN"),
         autocommit=True
     )
 
@@ -106,15 +105,15 @@ async def get_schema():
     """
     Executes a metadata query against Exasol system tables to fetch active table columns.
     """
-    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN")
+    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN").upper()
     try:
         conn = get_exasol_connection()
         
-        # Query Exasol metadata system view for user tables and columns
+        # Force UPPER() on table_schema to prevent casing mismatches in Exasol system views
         sql = """
             SELECT table_name, column_name, column_type
             FROM EXA_ALL_TAB_COLUMNS
-            WHERE table_schema = :schema
+            WHERE UPPER(table_schema) = :schema
             ORDER BY table_name, ordinal_position;
         """
         rows = conn.execute(sql, {"schema": schema_name}).fetchall()
@@ -132,5 +131,4 @@ async def get_schema():
         
     except Exception as e:
         logger.error(f"Error fetching Exasol schema: {str(e)}")
-        # Fallback to empty schema structure if DB is uninitialized or empty
         return {"tables": []}
