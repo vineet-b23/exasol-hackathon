@@ -144,7 +144,7 @@ class GeminiClient:
 
         return self._get_fallback_plan(query)
 
-def summarize_results(self, query: str, execution_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def summarize_results(self, query: str, execution_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Generates contextual summaries based on user query."""
         timeframe = self._extract_timeframe(query)
 
