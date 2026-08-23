@@ -63,6 +63,9 @@ class GeminiClient:
             logger.warning("GEMINI_API_KEY is not set or using placeholder value.")
             self.client = None
 
+        # Fixed: Bind method alias properly in __init__
+        self.plan_investigation = self.generate_plan
+
     def generate_plan(self, query: str) -> Dict[str, Any]:
         """
         Generates structured hypotheses plan mapped to InvestigationEngine expectations.
@@ -85,7 +88,6 @@ class GeminiClient:
                     system_instruction=SYSTEM_PROMPT,
                     response_mime_type="application/json",
                     response_schema=HypothesisPlan,
-                    temperature=0.2,
                 )
             )
             
@@ -98,8 +100,6 @@ class GeminiClient:
             logger.error(f"Gemini generate_plan call failed: {e}")
         
         return {"hypotheses": []}
-
-    plan_investigation = generate_plan
 
     def summarize_results(self, query: str, execution_results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -128,7 +128,6 @@ class GeminiClient:
                     system_instruction=SYSTEM_PROMPT,
                     response_mime_type="application/json",
                     response_schema=InvestigationSummary,
-                    temperature=0.3,
                 )
             )
             

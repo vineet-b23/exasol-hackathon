@@ -13,8 +13,8 @@ load_dotenv(dotenv_path=ROOT_DIR / ".env")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Relative import after environment variables are initialized
-from .api.routes import router as api_router
+# Absolute import relative to backend root directory
+from api.routes import router as api_router
 
 # Configure standard logging
 logging.basicConfig(
@@ -54,5 +54,5 @@ app.include_router(api_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
-    # Standard entry point for running locally
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+    # Updated to main:app for direct execution
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

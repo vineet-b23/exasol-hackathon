@@ -6,10 +6,10 @@ from typing import Dict, Any, Optional, List
 from starlette.concurrency import run_in_threadpool
 
 # Relative internal imports
-from ..database.sqlite_db import SQLiteDatabase
-from .validator import validate_sql
-from ..ai.gemini import GeminiClient
-from .scoring import calculate_evidence_score
+from database.sqlite_db import SQLiteDatabase
+from validator import validate_sql
+from ai.gemini import GeminiClient
+from scoring import calculate_evidence_score
 
 logger = logging.getLogger(__name__)
 

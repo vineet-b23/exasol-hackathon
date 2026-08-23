@@ -3,8 +3,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-# Relative import targeting the investigation engine package
-from ..investigation.engine import InvestigationEngine
+# Fixed: Absolute import relative to backend root directory
+from investigation.engine import InvestigationEngine
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
