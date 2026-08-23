@@ -19,8 +19,7 @@ def get_exasol_connection():
         password=os.getenv("EXASOL_PASSWORD"),
         autocommit=True
     )
-    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN").upper()
-    conn.execute(f"OPEN SCHEMA {schema_name};")
+    conn.execute("OPEN SCHEMA MAIN;")
     return conn
 
 # --- Pydantic Schemas ---
@@ -95,15 +94,16 @@ async def challenge_investigation(
 @router.get("/schema", summary="Get Database Schema")
 async def get_schema():
     """
-    Retrieves column structure for active tables using EXA_USER_TAB_COLUMNS.
+    Retrieves column structure from EXA_ALL_TAB_COLUMNS filtering strictly by table_schema = 'MAIN'.
     """
     try:
         conn = get_exasol_connection()
         
-        # Uses EXA_USER_TAB_COLUMNS relative to active MAIN session
+        # Explicit query against EXA_ALL_TAB_COLUMNS for MAIN schema
         sql = """
             SELECT table_name, column_name, column_type
-            FROM EXA_USER_TAB_COLUMNS
+            FROM EXA_ALL_TAB_COLUMNS
+            WHERE table_schema = 'MAIN'
             ORDER BY table_name, ordinal_position;
         """
         rows = conn.execute(sql).fetchall()
