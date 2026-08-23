@@ -12,12 +12,10 @@ When planning an investigation:
 3. Write highly optimized, valid EXASOL SQL SELECT statements to test each hypothesis.
 4. ONLY write `SELECT` statements. Never write `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, or any other data-modifying commands.
 5. CRITICAL EXASOL SQL RULES:
-   - Use standard ANSI SQL or Exasol date functions (e.g., `ADD_MONTHS()`, `DATE_TRUNC()`, `TO_DATE()`, `MONTH()`, `YEAR()`).
-   - Do NOT use SQLite functions like `strftime()`.
-   - Never use non-existent string placeholders like `'Target Period'`. If the user asks about July, filter using valid Exasol dates/months: e.g., `WHERE MONTH("order_date") = 7` or `WHERE "order_date" >= '2026-07-01' AND "order_date" < '2026-08-01'`.
-   - Table and column names in queries MUST strictly match the provided EXASOL DATABASE SCHEMA CONTEXT below.
-   - CRITICAL: Wrap all column and table names in double quotes to prevent Exasol uppercase identification errors (e.g., `"status"`, `"order_date"`, `"total_amount"`).
-   - Use standard `COUNT(*)` or `COUNT("order_id")` for aggregations if uncertain about amount column presence.
+   - ALL TABLE AND COLUMN NAMES MUST BE IN UPPERCASE (e.g., ORDERS, TOTAL_AMOUNT, ORDER_DATE, STATUS).
+   - DO NOT USE DOUBLE QUOTES around table or column names.
+   - Use standard Exasol date functions: `WHERE MONTH(ORDER_DATE) = 7` or `WHERE YEAR(ORDER_DATE) = 2026`.
+   - ONLY query tables that strictly exist in the schema below: ORDERS, CUSTOMERS, PRODUCTS, INVENTORY, CUSTOMER_SUPPORT.
 
 When summarizing results:
 1. Objectively evaluate the execution results of your queries.
@@ -29,43 +27,43 @@ When summarizing results:
 SCHEMA_CONTEXT = """
 ### EXASOL DATABASE SCHEMA CONTEXT ###
 
-Table: "orders"
-- "order_id" (DECIMAL(18,0), PRIMARY KEY)
-- "customer_id" (DECIMAL(18,0))
-- "order_date" (TIMESTAMP)
-- "total_amount" (DOUBLE)
-- "status" (VARCHAR(50)) -- e.g., 'pending', 'completed', 'cancelled', 'refunded'
+Table: ORDERS
+- ORDER_ID (DECIMAL(18,0), PRIMARY KEY)
+- CUSTOMER_ID (DECIMAL(18,0))
+- ORDER_DATE (TIMESTAMP)
+- TOTAL_AMOUNT (DOUBLE)
+- STATUS (VARCHAR(50)) -- e.g., 'pending', 'completed', 'cancelled', 'refunded'
 
-Table: "customers"
-- "customer_id" (DECIMAL(18,0), PRIMARY KEY)
-- "first_name" (VARCHAR(100))
-- "last_name" (VARCHAR(100))
-- "email" (VARCHAR(255))
-- "signup_date" (TIMESTAMP / DATE)
-- "status" (VARCHAR(50)) -- e.g., 'active', 'churned', 'suspended'
-- "country" (VARCHAR(100))
+Table: CUSTOMERS
+- CUSTOMER_ID (DECIMAL(18,0), PRIMARY KEY)
+- FIRST_NAME (VARCHAR(100))
+- LAST_NAME (VARCHAR(100))
+- EMAIL (VARCHAR(255))
+- SIGNUP_DATE (TIMESTAMP / DATE)
+- STATUS (VARCHAR(50)) -- e.g., 'active', 'churned', 'suspended'
+- COUNTRY (VARCHAR(100))
 
-Table: "products"
-- "product_id" (DECIMAL(18,0), PRIMARY KEY)
-- "sku" (VARCHAR(100), UNIQUE)
-- "name" (VARCHAR(255))
-- "category" (VARCHAR(100))
-- "unit_price" (DOUBLE)
-- "launch_date" (TIMESTAMP / DATE)
+Table: PRODUCTS
+- PRODUCT_ID (DECIMAL(18,0), PRIMARY KEY)
+- SKU (VARCHAR(100), UNIQUE)
+- NAME (VARCHAR(255))
+- CATEGORY (VARCHAR(100))
+- UNIT_PRICE (DOUBLE)
+- LAUNCH_DATE (TIMESTAMP / DATE)
 
-Table: "inventory"
-- "inventory_id" (DECIMAL(18,0), PRIMARY KEY)
-- "product_id" (DECIMAL(18,0))
-- "warehouse_location" (VARCHAR(100))
-- "quantity_on_hand" (DECIMAL(18,0))
-- "last_restocked_date" (TIMESTAMP)
+Table: INVENTORY
+- INVENTORY_ID (DECIMAL(18,0), PRIMARY KEY)
+- PRODUCT_ID (DECIMAL(18,0))
+- WAREHOUSE_LOCATION (VARCHAR(100))
+- QUANTITY_ON_HAND (DECIMAL(18,0))
+- LAST_RESTOCKED_DATE (TIMESTAMP)
 
-Table: "customer_support"
-- "ticket_id" (DECIMAL(18,0), PRIMARY KEY)
-- "customer_id" (DECIMAL(18,0))
-- "order_id" (DECIMAL(18,0))
-- "issue_type" (VARCHAR(100)) -- e.g., 'billing', 'shipping', 'quality', 'general'
-- "status" (VARCHAR(50)) -- e.g., 'open', 'resolved', 'escalated'
-- "created_at" (TIMESTAMP)
-- "resolved_at" (TIMESTAMP)
+Table: CUSTOMER_SUPPORT
+- TICKET_ID (DECIMAL(18,0), PRIMARY KEY)
+- CUSTOMER_ID (DECIMAL(18,0))
+- ORDER_ID (DECIMAL(18,0))
+- ISSUE_TYPE (VARCHAR(100))
+- STATUS (VARCHAR(50))
+- CREATED_AT (TIMESTAMP)
+- RESOLVED_AT (TIMESTAMP)
 """
