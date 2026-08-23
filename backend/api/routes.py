@@ -94,17 +94,17 @@ async def challenge_investigation(
 @router.get("/schema", summary="Get Database Schema")
 async def get_schema():
     """
-    Retrieves column structure from EXA_ALL_TAB_COLUMNS filtering strictly by table_schema = 'MAIN'.
+    Retrieves column structure by querying EXA_ALL_COLUMNS for table_schema = 'MAIN'.
     """
     try:
         conn = get_exasol_connection()
         
-        # Explicit query against EXA_ALL_TAB_COLUMNS for MAIN schema
+        # Query EXA_ALL_COLUMNS view directly
         sql = """
-            SELECT table_name, column_name, column_type
-            FROM EXA_ALL_TAB_COLUMNS
-            WHERE table_schema = 'MAIN'
-            ORDER BY table_name, ordinal_position;
+            SELECT column_table, column_name, column_type
+            FROM EXA_ALL_COLUMNS
+            WHERE column_schema = 'MAIN'
+            ORDER BY column_table, column_ordinal_position;
         """
         rows = conn.execute(sql).fetchall()
         conn.close()
