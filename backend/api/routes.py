@@ -106,33 +106,22 @@ async def challenge_investigation(
 
 @router.get("/schema", summary="Get Database Schema")
 async def get_schema():
-    """
-    Executes a metadata query against Exasol system tables to fetch active table columns.
-    """
-    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN").upper()
     try:
         conn = get_exasol_connection()
         
-        # Explicitly query tables within the target schema
-        sql = """
-            SELECT table_name, column_name, column_type
-            FROM EXA_ALL_TAB_COLUMNS
-            WHERE UPPER(table_schema) = :schema
-            ORDER BY table_name, ordinal_position;
-        """
-        rows = conn.execute(sql, {"schema": schema_name}).fetchall()
+        # 1. Check current schema session
+        current_schema = conn.execute("SELECT CURRENT_SCHEMA;").fetchone()[0]
+        
+        # 2. Query ALL tables accessible in EXA_ALL_TABLES regardless of schema
+        all_tables = conn.execute("SELECT table_schema, table_name FROM EXA_ALL_TABLES;").fetchall()
+        
         conn.close()
 
-        # Group flat result into nested structure expected by frontend
-        tables_dict = {}
-        for table_name, col_name, col_type in rows:
-            if table_name not in tables_dict:
-                tables_dict[table_name] = []
-            tables_dict[table_name].append({"name": col_name, "type": col_type})
-
-        tables = [{"table_name": k, "columns": v} for k, v in tables_dict.items()]
-        return {"tables": tables}
+        return {
+            "current_session_schema": current_schema,
+            "visible_tables": [{"schema": t[0], "table_name": t[1]} for t in all_tables]
+        }
         
     except Exception as e:
-        logger.error(f"Error fetching Exasol schema: {str(e)}")
-        return {"tables": []}
+        logger.error(f"Error in debug schema: {str(e)}")
+        return {"error": str(e)}
