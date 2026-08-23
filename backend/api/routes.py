@@ -105,18 +105,17 @@ async def get_schema():
     """
     Executes a metadata query against Exasol system tables to fetch active table columns.
     """
-    schema_name = os.getenv("EXASOL_SCHEMA", "MAIN").upper()
     try:
         conn = get_exasol_connection()
         
-        # Force UPPER() on table_schema to prevent casing mismatches in Exasol system views
+        # Query user tables excluding built-in system schemas
         sql = """
             SELECT table_name, column_name, column_type
             FROM EXA_ALL_TAB_COLUMNS
-            WHERE UPPER(table_schema) = :schema
+            WHERE table_schema NOT IN ('SYS', 'EXA_STATISTICS')
             ORDER BY table_name, ordinal_position;
         """
-        rows = conn.execute(sql, {"schema": schema_name}).fetchall()
+        rows = conn.execute(sql).fetchall()
         conn.close()
 
         # Group flat result into nested structure expected by frontend
