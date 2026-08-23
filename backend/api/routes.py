@@ -5,7 +5,6 @@ import pyexasol
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-# Absolute import relative to backend root directory
 from investigation.engine import InvestigationEngine
 
 logger = logging.getLogger(__name__)
@@ -13,14 +12,13 @@ router = APIRouter()
 
 # --- Helpers ---
 def get_exasol_connection():
-    """Utility to establish a connection with Exasol SaaS and open the target schema."""
+    """Utility to establish a connection with Exasol SaaS and open MAIN schema."""
     conn = pyexasol.connect(
         dsn=os.getenv("EXASOL_HOST"),
         user=os.getenv("EXASOL_USER"),
         password=os.getenv("EXASOL_PASSWORD"),
         autocommit=True
     )
-    # Ensure active schema context is set to MAIN for every connection
     schema_name = os.getenv("EXASOL_SCHEMA", "MAIN").upper()
     conn.execute(f"OPEN SCHEMA {schema_name};")
     return conn
@@ -30,7 +28,6 @@ class InvestigateRequest(BaseModel):
     query: str
 
 class ChallengeRequest(BaseModel):
-    """Optional payload for challenging an investigation, e.g., user context or specific feedback."""
     context: Optional[str] = None
 
 # --- Dependency Injection Helpers ---
@@ -41,12 +38,10 @@ def get_investigation_engine() -> InvestigationEngine:
 
 @router.get("/health", summary="Health Check")
 async def health_check():
-    """Simple health-check endpoint."""
     return {"status": "ok"}
 
 @router.get("/db-test", summary="Exasol DB Health Check")
 async def db_test():
-    """Verifies live pyexasol connection to Exasol SaaS cluster."""
     try:
         conn = get_exasol_connection()
         res = conn.execute("SELECT 1 AS status;").fetchall()
@@ -61,10 +56,6 @@ async def run_investigation(
     payload: InvestigateRequest,
     engine: InvestigationEngine = Depends(get_investigation_engine)
 ):
-    """
-    Accepts a natural language query and runs the full internal investigation pipeline.
-    Returns the resulting structured JSON response.
-    """
     try:
         logger.info(f"Starting investigation for query: {payload.query}")
         result = await engine.run_investigation(payload.query)
@@ -79,9 +70,6 @@ async def challenge_investigation(
     payload: Optional[ChallengeRequest] = None,
     engine: InvestigationEngine = Depends(get_investigation_engine)
 ):
-    """
-    Challenges a specific investigation result, triggering the counter-evidence workflow.
-    """
     try:
         logger.info(f"Running challenge workflow for investigation_id: {investigation_id}")
         
@@ -106,22 +94,30 @@ async def challenge_investigation(
 
 @router.get("/schema", summary="Get Database Schema")
 async def get_schema():
+    """
+    Retrieves column structure for active tables using EXA_USER_TAB_COLUMNS.
+    """
     try:
         conn = get_exasol_connection()
         
-        # 1. Check current schema session
-        current_schema = conn.execute("SELECT CURRENT_SCHEMA;").fetchone()[0]
-        
-        # 2. Query ALL tables accessible in EXA_ALL_TABLES regardless of schema
-        all_tables = conn.execute("SELECT table_schema, table_name FROM EXA_ALL_TABLES;").fetchall()
-        
+        # Uses EXA_USER_TAB_COLUMNS relative to active MAIN session
+        sql = """
+            SELECT table_name, column_name, column_type
+            FROM EXA_USER_TAB_COLUMNS
+            ORDER BY table_name, ordinal_position;
+        """
+        rows = conn.execute(sql).fetchall()
         conn.close()
 
-        return {
-            "current_session_schema": current_schema,
-            "visible_tables": [{"schema": t[0], "table_name": t[1]} for t in all_tables]
-        }
+        tables_dict = {}
+        for table_name, col_name, col_type in rows:
+            if table_name not in tables_dict:
+                tables_dict[table_name] = []
+            tables_dict[table_name].append({"name": col_name, "type": col_type})
+
+        tables = [{"table_name": k, "columns": v} for k, v in tables_dict.items()]
+        return {"tables": tables}
         
     except Exception as e:
-        logger.error(f"Error in debug schema: {str(e)}")
-        return {"error": str(e)}
+        logger.error(f"Error fetching Exasol schema: {str(e)}")
+        return {"tables": []}
