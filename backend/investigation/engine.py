@@ -21,23 +21,45 @@ class ExasolAdapter:
         conn = get_exasol_connection()
         try:
             res = conn.execute(sql_query)
-            # PyExasol fetchall returns list of tuples
-            rows_tuples = res.fetchall()
-            # Extract column names from query statement metadata
-            columns = [str(col) for col in (res.columns.tolist() if hasattr(res.columns, 'tolist') else res.columns)] if hasattr(res, 'columns') else []
+            
+            # Fetch raw row tuples safely
+            rows_tuples = res.fetchall() if hasattr(res, 'fetchall') else []
+            
+            # Safely extract column names from PyExasol / Pandas / Cursor
+            columns = []
+            if hasattr(res, 'columns'):
+                cols_attr = getattr(res, 'columns')
+                if callable(cols_attr):
+                    # PyExasol: res.columns() is a method that returns a dict/list of columns
+                    raw_cols = cols_attr()
+                    if isinstance(raw_cols, dict):
+                        columns = [str(k) for k in raw_cols.keys()]
+                    elif isinstance(raw_cols, (list, tuple)):
+                        columns = [str(c) for c in raw_cols]
+                elif hasattr(cols_attr, 'tolist'):
+                    columns = [str(c) for c in cols_attr.tolist()]
+                elif isinstance(cols_attr, (list, tuple)):
+                    columns = [str(c) for c in cols_attr]
+
+            # Fallback to DB-API description metadata if columns is still empty
+            if not columns and hasattr(res, 'description') and res.description:
+                columns = [str(col[0]) for col in res.description]
             
             # Map tuple rows to dictionary list for Gemini context engine
             rows_dict = []
             for row in rows_tuples:
-                if columns:
+                if columns and len(columns) == len(row):
                     rows_dict.append(dict(zip(columns, row)))
                 else:
-                    rows_dict.append({"data": list(row)})
+                    rows_dict.append({f"col_{i}": val for i, val in enumerate(row)})
             
             return {
                 "columns": columns,
                 "rows": rows_dict
             }
+        except Exception as e:
+            logger.error(f"ExasolAdapter execution error for query '{sql_query}': {e}")
+            raise e
         finally:
             conn.close()
 
@@ -49,7 +71,6 @@ class InvestigationEngine:
     """
     
     def __init__(self, db: Optional[Any] = None, gemini: Optional[GeminiClient] = None):
-        # Default to ExasolAdapter instead of unpopulated trace.db
         self.db = db or ExasolAdapter()
         self.gemini = gemini or GeminiClient()
 
